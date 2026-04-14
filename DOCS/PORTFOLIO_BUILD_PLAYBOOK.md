@@ -810,3 +810,17 @@ Before ending a substantial session:
     - containerized app runtime (`app.chess-chat.com`).
 - Repository hygiene update:
   - Local artifact convention established via `.local/` for non-committed UI assets/exports.
+
+## UX Audio Feedback Update (2026-03-28)
+- Strategy decision:
+  - Replace generic synthesized beep with event-aware chess sound cues to improve state clarity and interaction confidence.
+  - Keep control with users through persisted `Sound On/Off` preference in the room runtime UI.
+- Implementation direction:
+  - WebSocket `move_made` contract now emits additive move audio metadata:
+    - `moveType = move | capture | castle | promotion`
+    - `isCheck = boolean`
+  - Frontend maps runtime events to curated CC0 sound assets (Kenney Interface Sounds).
+- Architecture and interview value:
+  - Demonstrates practical contract evolution without breaking clients (additive fields only).
+  - Shows operational/legal discipline by tracking third-party asset licensing in-repo.
+  - Improves UX signal quality while keeping complexity/cost near-zero (static assets only, no additional services).

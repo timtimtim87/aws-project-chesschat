@@ -1,0 +1,106 @@
+direction down
+colorMode pastel
+
+// ─── Phase 1: Auth ────────────────────────────────────────────────────────────
+
+Auth [color: blue] {
+  chess-chat.com [icon: aws-cloudfront]
+  Cognito Hosted UI [icon: aws-cognito]
+  Email Verification
+  app.chess-chat.com [icon: aws-elastic-load-balancing]
+}
+
+chess-chat.com > Cognito Hosted UI: login / signup
+Cognito Hosted UI > Email Verification: new accounts only
+Email Verification > app.chess-chat.com: redirect with JWT
+
+// ─── Phase 2: Add a Friend ────────────────────────────────────────────────────
+
+Add Friend [color: green] {
+  Search by Username
+  Send Friend Request
+  Friend Request Notification
+  Friend Accepts
+  Friendship Established
+}
+
+Search by Username > Send Friend Request
+Send Friend Request > Friend Request Notification: Player B notified
+Friend Request Notification > Friend Accepts
+Friend Accepts > Friendship Established
+
+// ─── Phase 3: Challenge a Friend ─────────────────────────────────────────────
+
+Challenge [color: orange] {
+  Select Friend
+  Choose Game Settings
+  Challenge Sent
+  Challenge Notification
+  Friend Accepts Challenge
+  Challenge Accepted Notification
+  Pair Room Assigned
+}
+
+Select Friend > Choose Game Settings: time control, takebacks
+Choose Game Settings > Challenge Sent
+Challenge Sent > Challenge Notification: Player B notified
+Challenge Sent > Pair Room Assigned: stable room code for this pair
+Challenge Notification > Friend Accepts Challenge
+Friend Accepts Challenge > Challenge Accepted Notification: Player A notified
+
+// ─── Phase 4: Session Live ────────────────────────────────────────────────────
+
+Session Live [color: purple] {
+  Both Players in Room
+  Video Chat Active [icon: aws-chime-sdk]
+  Pieces Assigned (White / Black)
+  Chess Game Starts
+}
+
+Both Players in Room > Video Chat Active: Chime meeting created
+Video Chat Active > Pieces Assigned (White / Black)
+Pieces Assigned (White / Black) > Chess Game Starts
+
+// ─── Phase 5: Gameplay ────────────────────────────────────────────────────────
+
+Gameplay [color: pink] {
+  Player Makes Move
+  Clocks Running
+  Draw Offer (optional)
+  Opponent Responds
+  Game Ends
+}
+
+Player Makes Move > Clocks Running
+Clocks Running > Draw Offer (optional)
+Draw Offer (optional) > Opponent Responds
+Opponent Responds > Player Makes Move: next turn
+Opponent Responds > Game Ends: checkmate / timeout / resign / draw
+
+// ─── Phase 6: Reconnect (if needed) ──────────────────────────────────────────
+
+Reconnect [color: red] {
+  Player Disconnects
+  30-Second Grace Period
+  Reconnect Within Grace
+  Game Resumes
+}
+
+Player Disconnects > 30-Second Grace Period
+30-Second Grace Period > Reconnect Within Grace: player returns
+Reconnect Within Grace > Game Resumes: state fully restored
+
+// ─── Phase 7: Session End ─────────────────────────────────────────────────────
+
+Session End [color: yellow] {
+  Game Result Saved
+  Stats Updated
+  Play Again
+  Room Expires
+  Video Meeting Cleaned Up
+}
+
+Game Result Saved > Stats Updated: wins / losses / draws
+Stats Updated > Play Again: new game, same room
+Stats Updated > Room Expires: 60-minute hard limit
+Room Expires > Video Meeting Cleaned Up

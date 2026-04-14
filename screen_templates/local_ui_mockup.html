@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chess-Chat Local UI Mockup</title>
+    <style>
+      :root {
+        --bg: #11131a;
+        --bg-elev: #0c0e15;
+        --surface: #1d1f26;
+        --surface-high: #282a31;
+        --outline: rgba(60, 74, 70, 0.25);
+        --text: #e2e2ec;
+        --text-muted: #bacac5;
+        --text-soft: #8b9b97;
+        --primary: #2dd4bf;
+        --danger: #f87171;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 8% 8%, rgba(45, 212, 191, 0.12), transparent 25%), var(--bg);
+        color: var(--text);
+      }
+
+      .layout {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 84px 1fr;
+      }
+
+      .side {
+        border-right: 1px solid var(--outline);
+        background: var(--bg-elev);
+        padding: 18px 10px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+      }
+
+      .brand {
+        font-weight: 800;
+        color: var(--primary);
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .nav button {
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-soft);
+        border-radius: 12px;
+        height: 44px;
+        cursor: pointer;
+      }
+
+      .nav button.active {
+        color: var(--primary);
+        border-color: rgba(45, 212, 191, 0.3);
+        background: rgba(45, 212, 191, 0.08);
+      }
+
+      .main {
+        min-width: 0;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 72px;
+        padding: 0 18px;
+        border-bottom: 1px solid var(--outline);
+        background: rgba(17, 19, 26, 0.78);
+        backdrop-filter: blur(12px);
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+      }
+
+      .icon {
+        border: 1px solid transparent;
+        border-radius: 10px;
+        width: 38px;
+        height: 38px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+      }
+
+      .icon:hover {
+        color: var(--primary);
+        border-color: rgba(45, 212, 191, 0.2);
+        background: rgba(45, 212, 191, 0.08);
+      }
+
+      .badge {
+        position: absolute;
+        top: 2px;
+        right: 46px;
+        min-width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: var(--primary);
+        color: #003731;
+        font-size: 11px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        padding: 0 4px;
+      }
+
+      .dropdown {
+        position: absolute;
+        right: 0;
+        top: 46px;
+        width: min(360px, calc(100vw - 110px));
+        border: 1px solid var(--outline);
+        background: rgba(12, 14, 21, 0.96);
+        border-radius: 12px;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
+        padding: 10px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .drop-item {
+        border: 1px solid var(--outline);
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 8px;
+      }
+
+      .drop-title {
+        font-weight: 700;
+      }
+
+      .drop-sub {
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .btn {
+        border: 1px solid var(--outline);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: var(--surface-high);
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        background: var(--primary);
+        color: #003731;
+        border-color: rgba(45, 212, 191, 0.7);
+      }
+
+      .btn.danger {
+        color: var(--danger);
+        border-color: rgba(248, 113, 113, 0.35);
+        background: rgba(248, 113, 113, 0.12);
+      }
+
+      .content {
+        padding: 20px;
+      }
+
+      .page {
+        display: none;
+      }
+
+      .page.active {
+        display: block;
+      }
+
+      .title {
+        font-size: clamp(28px, 4vw, 44px);
+        font-weight: 800;
+        margin: 0;
+      }
+
+      .subtitle {
+        color: var(--text-muted);
+        margin-top: 8px;
+      }
+
+      .grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 14px;
+      }
+
+      .panel {
+        border: 1px solid var(--outline);
+        border-radius: 14px;
+        background: rgba(29, 31, 38, 0.72);
+        padding: 14px;
+      }
+
+      .input {
+        width: 100%;
+        border: 1px solid var(--outline);
+        border-radius: 10px;
+        padding: 11px;
+        background: var(--bg-elev);
+        color: var(--text);
+      }
+
+      .friend {
+        border: 1px solid var(--outline);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .tag {
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        padding: 4px 8px;
+      }
+
+      .tag.online {
+        color: var(--primary);
+        border: 1px solid rgba(45, 212, 191, 0.3);
+        background: rgba(45, 212, 191, 0.1);
+      }
+
+      .tag.offline {
+        color: #ffb4ab;
+        border: 1px solid rgba(248, 113, 113, 0.35);
+        background: rgba(248, 113, 113, 0.14);
+      }
+
+      .log {
+        margin-top: 8px;
+        font-size: 13px;
+      }
+
+      .ok {
+        color: var(--primary);
+      }
+
+      .err {
+        color: #ffb4ab;
+      }
+
+      .board {
+        margin-top: 10px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--outline);
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+      }
+
+      .sq {
+        aspect-ratio: 1;
+      }
+
+      .sq:nth-child(odd) {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .sq:nth-child(even) {
+        background: rgba(45, 212, 191, 0.12);
+      }
+
+      @media (max-width: 980px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="side">
+        <div class="brand">CC</div>
+        <nav class="nav">
+          <button data-page="play" class="active">Play</button>
+          <button data-page="game">Game</button>
+          <button data-page="profile">Profile</button>
+          <button data-page="friends">Friends</button>
+          <button data-page="history">History</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <strong>Chess-Chat Local Mockup</strong>
+          <div class="top-actions">
+            <button class="icon" title="Search">S</button>
+            <button id="notifBtn" class="icon" title="Notifications">N</button>
+            <span id="notifBadge" class="badge hidden">0</span>
+            <button id="settingsBtn" class="icon" title="Settings">⚙</button>
+
+            <div id="notifDrop" class="dropdown hidden">
+              <div id="notifList"></div>
+              <small class="drop-sub">Local mock state only. No backend events are used.</small>
+            </div>
+            <div id="settingsDrop" class="dropdown hidden">
+              <div class="drop-item">
+                <label><input id="setSound" type="checkbox" checked /> Sound effects</label>
+              </div>
+              <div class="drop-item">
+                <label><input id="setBadges" type="checkbox" checked /> Online badges</label>
+              </div>
+              <div class="drop-item">
+                <label><input id="setCompact" type="checkbox" /> Compact cards</label>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="content">
+          <article id="page-play" class="page active">
+            <h1 class="title">Play</h1>
+            <p class="subtitle">Primary flow is friends-first. Quick challenge stays as fallback.</p>
+            <div class="grid">
+              <div class="panel">
+                <h3>Quick Challenge (Fallback)</h3>
+                <p class="subtitle">Use this if you already know the username.</p>
+                <div class="row">
+                  <input id="quickUser" class="input" placeholder="friend_username" />
+                  <button id="quickSend" class="btn primary">Send Challenge</button>
+                </div>
+                <div id="quickLog" class="log"></div>
+              </div>
+              <aside class="panel">
+                <h3>Mockup Scope</h3>
+                <ul>
+                  <li>Friends-first challenge flow</li>
+                  <li>Notifications accept/reject</li>
+                  <li>Game standby and room entry</li>
+                  <li>Top quick settings dropdown</li>
+                </ul>
+              </aside>
+            </div>
+          </article>
+
+          <article id="page-friends" class="page">
+            <h1 class="title">Friends</h1>
+            <p class="subtitle">Default match path: click Play Now on online friends.</p>
+            <div class="panel">
+              <div id="friendsList"></div>
+              <div class="row">
+                <button id="simulateIncoming" class="btn">Simulate Incoming Challenge</button>
+              </div>
+              <div id="friendsLog" class="log"></div>
+            </div>
+          </article>
+
+          <article id="page-game" class="page">
+            <h1 class="title">Game</h1>
+            <p class="subtitle">Room control surface. Accept challenge to activate.</p>
+            <div class="grid">
+              <div class="panel">
+                <h3 id="gameStatusTitle">No Active Match</h3>
+                <p id="gameStatusBody" class="subtitle">
+                  Accept a challenge from notifications, or send one from Friends/Play.
+                </p>
+                <button id="enterRoomBtn" class="btn primary hidden">Enter Room</button>
+              </div>
+              <aside class="panel">
+                <h3>Flow Rule</h3>
+                <p class="subtitle">Offline users cannot be challenged in this mock flow.</p>
+              </aside>
+            </div>
+          </article>
+
+          <article id="page-room" class="page">
+            <h1 class="title">Game Room (Mock)</h1>
+            <p class="subtitle">Visual room stub for UX iteration only.</p>
+            <div class="grid">
+              <div class="panel">
+                <h3 id="roomOpponent">Opponent: --</h3>
+                <p class="subtitle" id="roomCode">Room: PREV1</p>
+                <div class="board" id="board"></div>
+              </div>
+              <aside class="panel">
+                <h3>Actions</h3>
+                <div class="row">
+                  <button class="btn">Start Game</button>
+                  <button class="btn danger">Resign</button>
+                </div>
+              </aside>
+            </div>
+          </article>
+
+          <article id="page-profile" class="page">
+            <h1 class="title">Profile</h1>
+            <p class="subtitle">Profile UI placeholder for local mockup pass.</p>
+          </article>
+
+          <article id="page-history" class="page">
+            <h1 class="title">History</h1>
+            <p class="subtitle">History UI placeholder for local mockup pass.</p>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const state = {
+        notifications: [
+          {
+            id: crypto.randomUUID(),
+            kind: "incoming",
+            from: "QueenGambit_X",
+            roomCode: "PREV1",
+            status: "pending"
+          }
+        ],
+        activeGame: null,
+        friends: [
+          { name: "KnightRider_04", username: "knightrider_04", online: true, elo: 1840 },
+          { name: "QueenGambit_X", username: "queengambit_x", online: true, elo: 2105 },
+          { name: "BishopBlunder", username: "bishopblunder", online: false, elo: 1420 }
+        ]
+      };
+
+      const navButtons = [...document.querySelectorAll("[data-page]")];
+      const pages = [...document.querySelectorAll(".page")];
+
+      function setPage(page) {
+        navButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.page === page));
+        pages.forEach((p) => p.classList.toggle("active", p.id === `page-${page}`));
+        if (page === "room") renderRoom();
+        if (page === "game") renderGameStatus();
+      }
+
+      navButtons.forEach((btn) => btn.addEventListener("click", () => setPage(btn.dataset.page)));
+
+      const notifBtn = document.getElementById("notifBtn");
+      const settingsBtn = document.getElementById("settingsBtn");
+      const notifDrop = document.getElementById("notifDrop");
+      const settingsDrop = document.getElementById("settingsDrop");
+
+      notifBtn.addEventListener("click", () => {
+        settingsDrop.classList.add("hidden");
+        notifDrop.classList.toggle("hidden");
+      });
+
+      settingsBtn.addEventListener("click", () => {
+        notifDrop.classList.add("hidden");
+        settingsDrop.classList.toggle("hidden");
+      });
+
+      function renderNotifications() {
+        const list = document.getElementById("notifList");
+        const unread = state.notifications.filter((n) => n.kind === "incoming" && n.status === "pending").length;
+        const badge = document.getElementById("notifBadge");
+        badge.textContent = unread;
+        badge.classList.toggle("hidden", unread === 0);
+
+        if (!state.notifications.length) {
+          list.innerHTML = '<p class="drop-sub">No notifications yet.</p>';
+          return;
+        }
+
+        list.innerHTML = state.notifications
+          .map((n) => {
+            if (n.kind === "incoming") {
+              return `
+                <div class="drop-item">
+                  <div class="drop-title">Challenge from ${n.from}</div>
+                  <div class="drop-sub">Status: ${n.status}</div>
+                  ${
+                    n.status === "pending"
+                      ? `<div class="row">
+                          <button class="btn primary" data-accept="${n.id}">Accept</button>
+                          <button class="btn" data-reject="${n.id}">Reject</button>
+                        </div>`
+                      : ""
+                  }
+                </div>
+              `;
+            }
+
+            return `
+              <div class="drop-item">
+                <div class="drop-title">Challenge sent to ${n.to}</div>
+                <div class="drop-sub">Status: ${n.status}</div>
+              </div>
+            `;
+          })
+          .join("");
+
+        list.querySelectorAll("[data-accept]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const note = state.notifications.find((n) => n.id === btn.dataset.accept);
+            if (!note) return;
+            note.status = "accepted";
+            state.activeGame = { opponent: note.from, roomCode: note.roomCode || "PREV1" };
+            renderNotifications();
+            renderGameStatus();
+            setPage("game");
+          });
+        });
+
+        list.querySelectorAll("[data-reject]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const note = state.notifications.find((n) => n.id === btn.dataset.reject);
+            if (!note) return;
+            note.status = "rejected";
+            renderNotifications();
+          });
+        });
+      }
+
+      function pushOutgoing(to) {
+        state.notifications.unshift({
+          id: crypto.randomUUID(),
+          kind: "outgoing",
+          to,
+          status: "pending"
+        });
+        renderNotifications();
+      }
+
+      function renderFriends() {
+        const root = document.getElementById("friendsList");
+        root.innerHTML = state.friends
+          .map(
+            (f) => `
+              <div class="friend">
+                <div>
+                  <strong>${f.name}</strong>
+                  <div class="drop-sub">Rating ${f.elo}</div>
+                </div>
+                <div class="row">
+                  <span class="tag ${f.online ? "online" : "offline"}">${f.online ? "ONLINE" : "OFFLINE"}</span>
+                  <button class="btn" data-play-friend="${f.username}">Play Now</button>
+                </div>
+              </div>
+            `
+          )
+          .join("");
+
+        root.querySelectorAll("[data-play-friend]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const friend = state.friends.find((f) => f.username === btn.dataset.playFriend);
+            const log = document.getElementById("friendsLog");
+            if (!friend) return;
+            if (!friend.online) {
+              log.className = "log err";
+              log.textContent = `${friend.name} is offline. Challenge blocked.`;
+              return;
+            }
+            pushOutgoing(friend.name);
+            log.className = "log ok";
+            log.textContent = `Request sent to ${friend.name}.`;
+          });
+        });
+      }
+
+      function renderGameStatus() {
+        const title = document.getElementById("gameStatusTitle");
+        const body = document.getElementById("gameStatusBody");
+        const enter = document.getElementById("enterRoomBtn");
+        if (!state.activeGame) {
+          title.textContent = "No Active Match";
+          body.textContent = "Accept a challenge from notifications, or send one from Friends/Play.";
+          enter.classList.add("hidden");
+          return;
+        }
+        title.textContent = "Active Match Ready";
+        body.textContent = `Opponent: ${state.activeGame.opponent} | Room ${state.activeGame.roomCode}`;
+        enter.classList.remove("hidden");
+      }
+
+      function renderRoom() {
+        const opp = document.getElementById("roomOpponent");
+        const room = document.getElementById("roomCode");
+        const game = state.activeGame || { opponent: "Mock Opponent", roomCode: "PREV1" };
+        opp.textContent = `Opponent: ${game.opponent}`;
+        room.textContent = `Room: ${game.roomCode}`;
+      }
+
+      document.getElementById("enterRoomBtn").addEventListener("click", () => setPage("room"));
+
+      document.getElementById("quickSend").addEventListener("click", () => {
+        const input = document.getElementById("quickUser");
+        const log = document.getElementById("quickLog");
+        const username = input.value.trim().toLowerCase();
+        if (!/^[a-z0-9._-]{3,24}$/.test(username)) {
+          log.className = "log err";
+          log.textContent = "Enter a valid username (3-24 chars).";
+          return;
+        }
+        pushOutgoing(username);
+        log.className = "log ok";
+        log.textContent = `Challenge request sent to ${username}.`;
+      });
+
+      document.getElementById("simulateIncoming").addEventListener("click", () => {
+        state.notifications.unshift({
+          id: crypto.randomUUID(),
+          kind: "incoming",
+          from: "KnightRider_04",
+          roomCode: "PREV1",
+          status: "pending"
+        });
+        renderNotifications();
+        document.getElementById("friendsLog").className = "log ok";
+        document.getElementById("friendsLog").textContent = "Incoming challenge simulated.";
+      });
+
+      const board = document.getElementById("board");
+      board.innerHTML = Array.from({ length: 64 }, () => '<div class="sq"></div>').join("");
+
+      renderNotifications();
+      renderFriends();
+      renderGameStatus();
+    </script>
+  </body>
+</html>

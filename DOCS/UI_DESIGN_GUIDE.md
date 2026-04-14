@@ -436,3 +436,34 @@ Last updated: 2026-03-09
 
 ### Notes
 - Preview mode is not a substitute for end-to-end validation against real auth, WS, and game services.
+
+## 22) CC0 Chess Event Sound System (2026-03-28)
+
+### Decision
+- Replaced the synthetic move beep with curated CC0 sound assets mapped to chess event types.
+- Added user-controlled sound preference in the real room UI with persistence.
+
+### What changed
+- Sound asset pack:
+  - Added curated `.ogg` files under `app/frontend/public/sounds/chesschat/`.
+  - Added license/source record in `app/frontend/public/sounds/chesschat/LICENSES.md`.
+- Mapping behavior:
+  - `move_made` now plays event-specific cues (`move`, `capture`, `castle`, `promotion`) with `check` priority when `isCheck=true`.
+  - `game_ended` now plays `win` or `draw` sound.
+  - Blocking gameplay errors (for example `ILLEGAL_MOVE`) play `error` sound.
+- Control surface:
+  - Added `Sound On/Off` toggle in room action controls.
+  - Preference persisted via `localStorage` key `chesschat_sound_enabled` (default `true`).
+
+### Why
+- Improves gameplay state legibility and perceived polish without adding UI clutter.
+- Keeps licensing risk low and commercial-safe by using CC0 assets.
+- Supports accessibility/usability by allowing immediate user mute at the application layer.
+
+### Tradeoffs / risks
+- Sound personalization is currently binary (on/off); no per-event or volume controls in v1.
+- Browser autoplay policies can still suppress playback before user interaction; implementation safely no-ops in this case.
+
+### Validation
+- Backend unit tests expanded for move classification (`move/capture/castle/promotion`) and `isCheck`.
+- Frontend unit/integration coverage expanded for sound mapping and disabled-preference suppression.

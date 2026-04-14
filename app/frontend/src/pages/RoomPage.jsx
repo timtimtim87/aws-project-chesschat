@@ -6,9 +6,21 @@ import { useAuth } from "../context/AuthContext";
 import { useAppSocket } from "../context/AppSocketContext";
 import { createMeetingSession, listDevices, startMedia, stopMedia } from "../services/chime";
 import { appStateReducer, initialAppState } from "../state/appState";
+import { resolveMoveSoundKey, resolveResultSoundKey, shouldPlayErrorSound } from "../utils/gameSounds";
 import { isValidRoomCode } from "../utils/roomCode";
 
 const LAST_ROOM_CODE_KEY = "chesschat_last_room_code";
+const SOUND_ENABLED_KEY = "chesschat_sound_enabled";
+const SOUND_FILE_BY_KEY = {
+  move: "/sounds/chesschat/move.ogg",
+  capture: "/sounds/chesschat/capture.ogg",
+  castle: "/sounds/chesschat/castle.ogg",
+  promotion: "/sounds/chesschat/promotion.ogg",
+  check: "/sounds/chesschat/check.ogg",
+  win: "/sounds/chesschat/win.ogg",
+  draw: "/sounds/chesschat/draw.ogg",
+  error: "/sounds/chesschat/error.ogg"
+};
 
 function roomDebug(message, context = {}) {
   console.info("[room-debug]", message, context);
@@ -86,10 +98,19 @@ export default function RoomPage() {
   const remoteVideoRef = useRef(null);
   const reconnectVersionRef = useRef(0);
   const autoJoinMeetingIdRef = useRef(null);
-  const audioContextRef = useRef(null);
+  const soundPlayersRef = useRef({});
   const [clockNowMs, setClockNowMs] = useState(Date.now());
   const [confirmResignOpen, setConfirmResignOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try {
+      const raw = localStorage.getItem(SOUND_ENABLED_KEY);
+      return raw === null ? true : raw === "true";
+    } catch {
+      return true;
+    }
+  });
+  const soundEnabledRef = useRef(soundEnabled);
   const [gameSettings, setGameSettings] = useState({
     timeWhiteSeconds: 300,
     timeBlackSeconds: 300,
@@ -107,6 +128,58 @@ export default function RoomPage() {
       sessionStorage.setItem(LAST_ROOM_CODE_KEY, roomCode);
     }
   }, [roomCode]);
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    const players = {};
+    for (const [key, file] of Object.entries(SOUND_FILE_BY_KEY)) {
+      const audio = new Audio(file);
+      audio.preload = "auto";
+      audio.volume = key === "win" ? 0.62 : 0.72;
+      players[key] = audio;
+    }
+    soundPlayersRef.current = players;
+    return () => {
+      for (const player of Object.values(players)) {
+        player.pause();
+      }
+      soundPlayersRef.current = {};
+    };
+  }, []);
+
+  function playSound(key) {
+    if (!soundEnabledRef.current) {
+      return;
+    }
+    const player = soundPlayersRef.current[key];
+    if (!player) {
+      return;
+    }
+    player.currentTime = 0;
+    try {
+      const result = player.play();
+      if (result?.catch) {
+        result.catch(() => null);
+      }
+    } catch {
+      // Ignore browser/media API playback exceptions.
+    }
+  }
+
+  function toggleSoundEnabled() {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SOUND_ENABLED_KEY, String(next));
+      } catch {
+        // Ignore localStorage failures to keep UI responsive.
+      }
+      return next;
+    });
+  }
 
   function stopMeetingSession() {
     const session = meetingSessionRef.current;
@@ -290,7 +363,7 @@ export default function RoomPage() {
               move: payload.move || null,
               turn: payload.turn
             });
-            playMoveSound();
+            playSound(resolveMoveSoundKey(payload));
             dispatch({
               type: "MOVE_MADE",
               fen: payload.fen,
@@ -342,6 +415,7 @@ export default function RoomPage() {
             break;
           case "game_ended":
             reconnectVersionRef.current += 1;
+            playSound(resolveResultSoundKey(payload));
             dispatch({
               type: "GAME_ENDED",
               result: {
@@ -368,6 +442,9 @@ export default function RoomPage() {
               message: normalized.message,
               retryable: normalized.retryable
             });
+            if (shouldPlayErrorSound(normalized)) {
+              playSound("error");
+            }
             if (normalized.retryable) {
               dispatch({ type: "SET_TOAST_ERROR", error: normalized });
             } else {
@@ -489,32 +566,6 @@ export default function RoomPage() {
 
   function acceptDraw() {
     send("accept_draw", { roomCode });
-  }
-
-  function playMoveSound() {
-    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextCtor) {
-      return;
-    }
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContextCtor();
-    }
-    const ctx = audioContextRef.current;
-    if (ctx.state === "suspended") {
-      ctx.resume().catch(() => null);
-    }
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(660, now);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.05, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.14);
   }
 
   async function joinMedia() {
@@ -826,6 +877,9 @@ export default function RoomPage() {
           </div>
 
           <div className="room-action-row">
+            <button className="button-ghost" onClick={toggleSoundEnabled}>
+              Sound {soundEnabled ? "On" : "Off"}
+            </button>
             <button className="button-primary" onClick={startGame} disabled={!canStartGame}>
               Start Game
             </button>

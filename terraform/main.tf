@@ -178,17 +178,18 @@ module "elasticache" {
 }
 
 module "dynamodb" {
-  source                     = "./modules/dynamodb"
-  project                    = var.project
-  environment                = var.environment
-  users_table_name           = var.dynamodb_users_table_name
-  games_table_name           = var.dynamodb_games_table_name
-  pair_rooms_table_name      = var.dynamodb_pair_rooms_table_name
-  friendships_table_name     = var.dynamodb_friendships_table_name
-  friend_requests_table_name = var.dynamodb_friend_requests_table_name
-  challenges_table_name      = var.dynamodb_challenges_table_name
-  notifications_table_name   = var.dynamodb_notifications_table_name
-  tags                       = local.common_tags
+  source                      = "./modules/dynamodb"
+  project                     = var.project
+  environment                 = var.environment
+  users_table_name            = var.dynamodb_users_table_name
+  games_table_name            = var.dynamodb_games_table_name
+  pair_rooms_table_name       = var.dynamodb_pair_rooms_table_name
+  friendships_table_name      = var.dynamodb_friendships_table_name
+  friend_requests_table_name  = var.dynamodb_friend_requests_table_name
+  challenges_table_name       = var.dynamodb_challenges_table_name
+  notifications_table_name    = var.dynamodb_notifications_table_name
+  deletion_protection_enabled = false
+  tags                        = local.common_tags
 }
 
 module "cognito" {

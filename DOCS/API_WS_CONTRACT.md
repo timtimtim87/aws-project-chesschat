@@ -194,8 +194,36 @@ Status: Active
 }
 ```
 
-### `game_started` / `move_made` / `game_ended`
-- Payloads include board state, move metadata, clocks, and winner/result fields.
+### `game_started`
+- Payload includes game IDs, player IDs, board state, settings, and clocks.
+
+### `move_made`
+```json
+{
+  "type": "move_made",
+  "roomCode": "AB12CD34",
+  "move": "e2e4",
+  "moveSan": "e4",
+  "moveType": "move",
+  "isCheck": false,
+  "moves": ["e2e4"],
+  "moveSans": ["e4"],
+  "moveFens": ["start", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"],
+  "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+  "turn": "black",
+  "timeWhite": 299.8,
+  "timeBlack": 300,
+  "drawOffer": null,
+  "takebacksWhiteUsed": 0,
+  "takebacksBlackUsed": 0,
+  "serverTimestampMs": 1700000001000
+}
+```
+- `moveType` enum: `"move" | "capture" | "castle" | "promotion"`.
+- `isCheck`: boolean indicator used by frontend sound/status UX.
+
+### `game_ended`
+- Payload includes winner, result reason, PGN, and reconnect version.
 
 ### `takeback_applied`
 - Broadcast after server-validated unilateral takeback.
