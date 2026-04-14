@@ -20,8 +20,9 @@ data "aws_cloudfront_cache_policy" "disabled" {
 }
 
 resource "aws_s3_bucket" "site" {
-  count  = local.enabled_effective ? 1 : 0
-  bucket = local.bucket_name
+  count         = local.enabled_effective ? 1 : 0
+  bucket        = local.bucket_name
+  force_destroy = true
 
   tags = merge(var.tags, {
     Name = "${local.name_prefix}-static-site"

@@ -1,0 +1,111 @@
+direction down
+colorMode pastel
+
+// ─── Flow 1: Authentication ───────────────────────────────────────────────────
+
+Auth [color: blue] {
+  Browser [icon: aws-user]
+  Cognito [icon: aws-cognito]
+  ALB [icon: aws-elb-application-load-balancer]
+  ECS [icon: aws-fargate]
+}
+
+Browser > Cognito: login / signup
+Cognito > Browser: JWT (access + id + refresh)
+Browser > ALB: request with JWT
+ALB > ECS: forward + verify JWT
+
+// ─── Flow 2: Room Join (WebSocket) ────────────────────────────────────────────
+
+Room Join [color: green] {
+  Browser [icon: aws-user]
+  ECS [icon: aws-fargate]
+  Redis room:<code> [icon: aws-elasticache]
+  Redis room_expiries ZSET [icon: aws-elasticache]
+  Redis ws:<connectionId> [icon: aws-elasticache]
+}
+
+Browser > ECS: JOIN_ROOM (WebSocket)
+ECS > Redis room:<code>: create room object (TTL 60 min)
+ECS > Redis room_expiries ZSET: zadd expiresAt score
+ECS > Redis ws:<connectionId>: store connectionId → userId + roomCode
+
+// ─── Flow 3: Video Start (both players connected) ─────────────────────────────
+
+Video Start [color: orange] {
+  ECS [icon: aws-fargate]
+  Chime [icon: aws-chime-sdk]
+  Browser [icon: aws-user]
+}
+
+ECS > Chime: createMeeting + createAttendee x2
+Chime > ECS: meetingData + attendeeData
+ECS > Browser: VIDEO_READY pushed via WebSocket
+
+// ─── Flow 4: Move Cycle ───────────────────────────────────────────────────────
+
+Move Cycle [color: purple] {
+  Browser [icon: aws-user]
+  ECS [icon: aws-fargate]
+  chess.js
+  Redis room:<code> [icon: aws-elasticache]
+}
+
+Browser > ECS: MAKE_MOVE (WebSocket)
+ECS > chess.js: validate move
+chess.js > ECS: legal / illegal
+ECS > Redis room:<code>: mutateRoom (optimistic lock + retry)
+ECS > Browser: MOVE_MADE broadcast to both players
+
+// ─── Flow 5: Game Completion ──────────────────────────────────────────────────
+
+Game Completion [color: pink] {
+  ECS [icon: aws-fargate]
+  Background Poller
+  Redis game_finalization_queue LIST [icon: aws-elasticache]
+  DynamoDB Games Table [icon: aws-dynamodb]
+  DynamoDB Users Table [icon: aws-dynamodb]
+}
+
+ECS > Redis game_finalization_queue LIST: enqueue job (game record + player IDs)
+Background Poller > Redis game_finalization_queue LIST: pop job
+Background Poller > DynamoDB Games Table: PutItem (game record)
+Background Poller > DynamoDB Users Table: atomic ADD wins / losses / draws
+
+// ─── Flow 6: Disconnect & Reconnect ──────────────────────────────────────────
+
+Reconnect [color: red] {
+  ECS [icon: aws-fargate]
+  Redis reconnect_deadlines ZSET [icon: aws-elasticache]
+  Browser [icon: aws-user]
+  Redis room:<code> [icon: aws-elasticache]
+}
+
+ECS > Redis reconnect_deadlines ZSET: zadd deadline (30s grace)
+Browser > ECS: reconnect WebSocket
+ECS > Redis reconnect_deadlines ZSET: clear deadline
+ECS > Redis room:<code>: restore paused game state
+ECS > Browser: RECONNECT_RESTORED
+
+// ─── Flow 7: Session Expiry ───────────────────────────────────────────────────
+
+Session Expiry [color: yellow] {
+  Background Poller
+  Redis room_expiries ZSET [icon: aws-elasticache]
+  Redis room:<code> [icon: aws-elasticache]
+  Chime [icon: aws-chime-sdk]
+}
+
+Background Poller > Redis room_expiries ZSET: poll zrangebyscore every 10s
+Background Poller > Redis room:<code>: delete room
+Background Poller > Chime: deleteMeeting (with retry)
+
+// ─── Observability ────────────────────────────────────────────────────────────
+
+Observability [color: gray] {
+  ECS [icon: aws-fargate]
+  CloudWatch [icon: aws-cloudwatch]
+}
+
+ECS > CloudWatch: structured logs (app events)
+ECS > CloudWatch: custom metrics (WsConnectionsOpened, GamesStarted, GamesEnded, AppErrors)

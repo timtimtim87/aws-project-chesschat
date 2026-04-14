@@ -188,6 +188,7 @@ module "dynamodb" {
   friend_requests_table_name = var.dynamodb_friend_requests_table_name
   challenges_table_name      = var.dynamodb_challenges_table_name
   notifications_table_name   = var.dynamodb_notifications_table_name
+  deletion_protection_enabled = false
   tags                       = local.common_tags
 }
 

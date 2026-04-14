@@ -5,6 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { AppSocketContext } from "../context/AppSocketContext";
 
 const mockSocketSend = vi.fn();
+const mockAudioPlay = vi.fn(() => Promise.resolve());
 let latestSocketListener = null;
 let RoomPage = null;
 
@@ -63,13 +64,33 @@ function renderRoom() {
 
 describe("RoomPage", () => {
   beforeAll(async () => {
+    vi.stubGlobal(
+      "Audio",
+      class AudioMock {
+        constructor(src = "") {
+          this.src = src;
+          this.autoplay = false;
+          this.preload = "";
+          this.volume = 1;
+          this.currentTime = 0;
+        }
+
+        play() {
+          return mockAudioPlay(this.src);
+        }
+
+        pause() {}
+      }
+    );
     const mod = await import("./RoomPage");
     RoomPage = mod.default;
   });
 
   beforeEach(() => {
     mockSocketSend.mockReset();
+    mockAudioPlay.mockReset();
     latestSocketListener = null;
+    localStorage.removeItem("chesschat_sound_enabled");
   });
 
   afterEach(() => {
@@ -129,5 +150,40 @@ describe("RoomPage", () => {
     });
     expect(await screen.findByText("Game Result")).toBeInTheDocument();
     expect(screen.getByText("checkmate")).toBeInTheDocument();
+  });
+
+  it("plays mapped move sound when sound is enabled", async () => {
+    renderRoom();
+    latestSocketListener({
+      type: "move_made",
+      moveType: "capture",
+      isCheck: false,
+      fen: "fen-2",
+      moves: ["e2e4"],
+      moveSans: ["e4"],
+      moveFens: ["start", "fen-2"],
+      turn: "black",
+      timeWhite: 299,
+      timeBlack: 300
+    });
+    await waitFor(() => expect(mockAudioPlay).toHaveBeenCalledWith("/sounds/chesschat/capture.ogg"));
+  });
+
+  it("suppresses sound playback when sound preference is disabled", () => {
+    localStorage.setItem("chesschat_sound_enabled", "false");
+    renderRoom();
+    latestSocketListener({
+      type: "move_made",
+      moveType: "move",
+      isCheck: false,
+      fen: "fen-2",
+      moves: ["e2e4"],
+      moveSans: ["e4"],
+      moveFens: ["start", "fen-2"],
+      turn: "black",
+      timeWhite: 299,
+      timeBlack: 300
+    });
+    expect(mockAudioPlay).not.toHaveBeenCalled();
   });
 });

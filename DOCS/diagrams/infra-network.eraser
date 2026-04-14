@@ -1,0 +1,105 @@
+direction down
+colorMode pastel
+
+// ─── External Users & DNS ───────────────────────────────────────────────────
+
+User [icon: aws-user]
+Route 53 [icon: aws-route-53]
+
+// ─── Static Edge (chess-chat.com) ───────────────────────────────────────────
+
+CloudFront [icon: aws-cloudfront]
+S3 Static Site [icon: aws-simple-storage-service]
+
+// ─── Auth (external to VPC) ─────────────────────────────────────────────────
+
+Cognito [icon: aws-cognito]
+
+// ─── AWS Managed Services (outside VPC) ─────────────────────────────────────
+
+DynamoDB [icon: aws-dynamodb]
+ECR [icon: aws-elastic-container-registry]
+CloudWatch [icon: aws-cloudwatch]
+Secrets Manager [icon: aws-secrets-manager]
+Chime [icon: aws-chime-sdk]
+
+// ─── VPC ────────────────────────────────────────────────────────────────────
+
+VPC 10.20.0.0/16 [icon: aws-vpc] {
+
+  Public Subnets — 3 AZs [color: blue] {
+    Internet Gateway [icon: aws-internet-gateway]
+    NAT Gateway [icon: aws-nat-gateway]
+    ALB [icon: aws-elb-application-load-balancer]
+  }
+
+  Private App Subnets — 3 AZs [color: green] {
+    ECS Fargate [icon: aws-fargate]
+
+    VPC Interface Endpoints [color: orange] {
+      ECR API Endpoint [icon: aws-vpc-endpoints]
+      ECR Docker Endpoint [icon: aws-vpc-endpoints]
+      CloudWatch Logs Endpoint [icon: aws-vpc-endpoints]
+      Secrets Manager Endpoint [icon: aws-vpc-endpoints]
+    }
+  }
+
+  Private Data Subnets — 3 AZs [color: red] {
+    Redis Primary [icon: aws-elasticache]
+    Redis Replica [icon: aws-elasticache]
+  }
+
+  VPC Gateway Endpoints [color: yellow] {
+    DynamoDB Gateway Endpoint [icon: aws-vpc-endpoints]
+    S3 Gateway Endpoint [icon: aws-vpc-endpoints]
+  }
+
+}
+
+// ─── Connections ─────────────────────────────────────────────────────────────
+
+// User → DNS → destinations
+User > Route 53
+Route 53 > CloudFront: chess-chat.com
+Route 53 > Internet Gateway: app.chess-chat.com
+
+// Static site path
+CloudFront > S3 Static Site: OAC (sigv4)
+
+// Auth redirect
+User > Cognito: login / signup redirect
+
+// Internet → VPC
+Internet Gateway > ALB: HTTPS 443
+
+// ALB → ECS
+ALB > ECS Fargate: HTTP port 8080 (sticky)
+
+// ECS → Redis (private data subnet)
+ECS Fargate > Redis Primary: TCP 6379
+
+// Redis replication
+Redis Primary > Redis Replica: replication
+
+// ECS → DynamoDB via gateway endpoint
+ECS Fargate > DynamoDB Gateway Endpoint
+DynamoDB Gateway Endpoint > DynamoDB: IAM auth
+
+// ECS → ECR via interface endpoints (image pull)
+ECS Fargate > ECR API Endpoint
+ECS Fargate > ECR Docker Endpoint
+ECR API Endpoint > ECR
+ECR Docker Endpoint > ECR
+
+// ECS → CloudWatch Logs via interface endpoint
+ECS Fargate > CloudWatch Logs Endpoint
+CloudWatch Logs Endpoint > CloudWatch: app logs + custom metrics
+
+// ECS → Secrets Manager via interface endpoint
+ECS Fargate > Secrets Manager Endpoint
+Secrets Manager Endpoint > Secrets Manager: Redis auth token
+
+// ECS → Chime (via NAT, outbound internet)
+ECS Fargate > NAT Gateway: outbound (Chime API)
+NAT Gateway > Internet Gateway
+Internet Gateway > Chime: HTTPS

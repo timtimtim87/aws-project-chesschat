@@ -889,6 +889,8 @@ async function handleMakeMove(ws, roomCode, move) {
           type: OutboundEvent.MOVE_MADE,
           move,
           moveSan: applied.san,
+          moveType: applied.moveType,
+          isCheck: applied.isCheck,
           moves: [...game.moves],
           moveSans: [...(game.move_sans || [])],
           moveFens: [...(game.move_fens || ["start"])],

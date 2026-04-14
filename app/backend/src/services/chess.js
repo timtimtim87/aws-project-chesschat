@@ -47,10 +47,17 @@ export function applyMove(fen, move) {
     return { ok: false };
   }
 
+  const isPromotion = Boolean(applied.promotion);
+  const isCastle = applied.flags?.includes("k") || applied.flags?.includes("q");
+  const isCapture = Boolean(applied.captured);
+  const moveType = isPromotion ? "promotion" : isCastle ? "castle" : isCapture ? "capture" : "move";
+
   return {
     ok: true,
     newFen: chess.fen(),
     san: applied.san,
+    moveType,
+    isCheck: chess.inCheck(),
     pgn: chess.pgn(),
     isCheckmate: chess.isCheckmate(),
     isStalemate: chess.isStalemate(),
