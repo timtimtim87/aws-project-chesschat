@@ -178,6 +178,48 @@ function buildGameRecord(roomCode, game, result, winnerPlayerId, now = Date.now(
   };
 }
 
+function resolveWinnerId(game, winner) {
+  if (winner === "white") return game.white_player_id;
+  if (winner === "black") return game.black_player_id;
+  return "draw";
+}
+
+function buildEndGameMeta(roomCode, game, result, nextRoom) {
+  const winnerPlayerId = resolveWinnerId(game, result.winner);
+  const gameRecord = buildGameRecord(roomCode, game, result, winnerPlayerId);
+  const reconnectVersion = (game.reconnect_version || 0) + 1;
+
+  nextRoom.games_played.push({
+    game_id: game.game_id,
+    winner: winnerPlayerId,
+    result: result.reason,
+    ended_at: Date.now()
+  });
+  nextRoom.active_game = null;
+
+  return {
+    winnerPlayerId,
+    gameRecord,
+    whitePlayerId: game.white_player_id,
+    blackPlayerId: game.black_player_id,
+    finalizationJob: buildFinalizationJob({
+      roomCode,
+      gameRecord,
+      whitePlayerId: game.white_player_id,
+      blackPlayerId: game.black_player_id,
+      winnerPlayerId
+    }),
+    event: {
+      type: OutboundEvent.GAME_ENDED,
+      gameId: game.game_id,
+      winner: winnerPlayerId,
+      result: result.reason,
+      pgn: result.pgn || "",
+      reconnectVersion
+    }
+  };
+}
+
 export function buildFinalizationJob({ roomCode, gameRecord, whitePlayerId, blackPlayerId, winnerPlayerId }) {
   return {
     gameId: gameRecord.game_id,
@@ -295,48 +337,8 @@ async function endGame(roomCode, result) {
     }
 
     const game = nextRoom.active_game;
-    const winnerPlayerId =
-      result.winner === "white"
-        ? game.white_player_id
-        : result.winner === "black"
-          ? game.black_player_id
-          : "draw";
-
-    const gameRecord = buildGameRecord(roomCode, game, result, winnerPlayerId);
-    const reconnectVersion = (game.reconnect_version || 0) + 1;
-
-    nextRoom.games_played.push({
-      game_id: game.game_id,
-      winner: winnerPlayerId,
-      result: result.reason,
-      ended_at: Date.now()
-    });
-    nextRoom.active_game = null;
-
-    return {
-      room: nextRoom,
-      meta: {
-        gameRecord,
-        whitePlayerId: game.white_player_id,
-        blackPlayerId: game.black_player_id,
-        winnerPlayerId,
-        finalizationJob: buildFinalizationJob({
-          roomCode,
-          gameRecord,
-          whitePlayerId: game.white_player_id,
-          blackPlayerId: game.black_player_id,
-          winnerPlayerId
-        }),
-        event: {
-          type: OutboundEvent.GAME_ENDED,
-          gameId: game.game_id,
-          winner: winnerPlayerId,
-          result: result.reason,
-          pgn: result.pgn || "",
-          reconnectVersion
-        }
-      }
-    };
+    const meta = buildEndGameMeta(roomCode, game, result, nextRoom);
+    return { room: nextRoom, meta };
   });
 
   if (!mutation.ok) {
@@ -537,15 +539,7 @@ async function handleJoinRoom(ws, roomCode) {
     });
 
     if (!joinMutation.ok) {
-      if (joinMutation.reason === "aborted" && joinMutation.error?.code === "RECONNECT_WINDOW_EXPIRED") {
-        send(ws, joinMutation.error);
-        return;
-      }
-      if (joinMutation.reason === "aborted" && joinMutation.error?.code === "ROOM_TERMINATED") {
-        send(ws, joinMutation.error);
-        return;
-      }
-      if (joinMutation.reason === "aborted" && joinMutation.error?.code === "ROOM_FULL") {
+      if (joinMutation.reason === "aborted" && joinMutation.error) {
         send(ws, joinMutation.error);
         return;
       }
@@ -822,63 +816,21 @@ async function handleMakeMove(ws, roomCode, move) {
 
     if (gameEnded) {
       const winner = timeoutReached
-        ? game.time_white <= 0
-          ? "black"
-          : "white"
+        ? game.time_white <= 0 ? "black" : "white"
         : applied.isCheckmate
-          ? game.turn === "white"
-            ? "black"
-            : "white"
+          ? game.turn === "white" ? "black" : "white"
           : "draw";
-      const result = {
-        winner,
-        reason: timeoutReached
-          ? "timeout"
-          : applied.isCheckmate
-            ? "checkmate"
-            : applied.isStalemate
-              ? "stalemate"
-              : "draw",
-        pgn: applied.pgn
-      };
-      const winnerPlayerId =
-        result.winner === "white"
-          ? game.white_player_id
-          : result.winner === "black"
-            ? game.black_player_id
-            : "draw";
-
-      const gameRecord = buildGameRecord(roomCode, game, result, winnerPlayerId);
-      const reconnectVersion = (game.reconnect_version || 0) + 1;
-
-      nextRoom.games_played.push({
-        game_id: game.game_id,
-        winner: winnerPlayerId,
-        result: result.reason,
-        ended_at: Date.now()
-      });
-      nextRoom.active_game = null;
-
-      return {
-        room: nextRoom,
-        meta: {
-          event: {
-            type: OutboundEvent.GAME_ENDED,
-            gameId: game.game_id,
-            winner: winnerPlayerId,
-            result: result.reason,
-            pgn: result.pgn || "",
-            reconnectVersion
-          },
-          finalizationJob: buildFinalizationJob({
-            roomCode,
-            gameRecord,
-            whitePlayerId: game.white_player_id,
-            blackPlayerId: game.black_player_id,
-            winnerPlayerId
-          })
-        }
-      };
+      const reason = timeoutReached ? "timeout"
+        : applied.isCheckmate ? "checkmate"
+        : applied.isStalemate ? "stalemate"
+        : "draw";
+      const { finalizationJob, event } = buildEndGameMeta(
+        roomCode,
+        game,
+        { winner, reason, pgn: applied.pgn },
+        nextRoom
+      );
+      return { room: nextRoom, meta: { event, finalizationJob } };
     }
 
     nextRoom.active_game = game;

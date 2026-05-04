@@ -22,10 +22,6 @@ const SOUND_FILE_BY_KEY = {
   error: "/sounds/chesschat/error.ogg"
 };
 
-function roomDebug(message, context = {}) {
-  console.info("[room-debug]", message, context);
-}
-
 function normalizeError(payload) {
   return {
     code: payload?.code || "INTERNAL_ERROR",
@@ -203,7 +199,6 @@ export default function RoomPage() {
     remoteTileIdRef.current = null;
     meetingSessionRef.current = null;
     dispatch({ type: "MEDIA_STOPPED" });
-    roomDebug("media_stopped");
   }
 
   useEffect(() => {
@@ -251,11 +246,6 @@ export default function RoomPage() {
     const unsubscribe = subscribe((payload) => {
         switch (payload.type) {
           case "room_joined":
-            roomDebug("event_room_joined", {
-              roomCode: payload.roomCode,
-              participants: payload.participants?.length || 0,
-              hasActiveGame: Boolean(payload.activeGame)
-            });
             reconnectVersionRef.current = payload.activeGame?.reconnectVersion || reconnectVersionRef.current;
             dispatch({
               type: "ROOM_JOINED",
@@ -265,11 +255,9 @@ export default function RoomPage() {
             });
             break;
           case "participant_joined":
-            roomDebug("event_participant_joined", { participants: payload.participants?.length || 0 });
             dispatch({ type: "PARTICIPANT_JOINED", participants: normalizeParticipants(payload.participants) });
             break;
           case "participant_left":
-            roomDebug("event_participant_left", { participants: payload.participants?.length || 0 });
             dispatch({ type: "PARTICIPANT_LEFT", participants: normalizeParticipants(payload.participants) });
             break;
           case "reconnect_state":
@@ -316,9 +304,6 @@ export default function RoomPage() {
             }
             break;
           case "video_ready":
-            roomDebug("event_video_ready", {
-              meetingId: payload.meetingData?.MeetingId || payload.meetingData?.meetingId
-            });
             dispatch({
               type: "VIDEO_READY",
               credentials: {
@@ -329,12 +314,6 @@ export default function RoomPage() {
             dispatch({ type: "CLEAR_TOAST_ERROR" });
             break;
           case "game_started":
-            roomDebug("event_game_started", {
-              gameId: payload.gameId,
-              whitePlayerId: payload.whitePlayerId,
-              blackPlayerId: payload.blackPlayerId,
-              turn: payload.turn
-            });
             reconnectVersionRef.current += 1;
             dispatch({
               type: "GAME_STARTED",
@@ -359,10 +338,6 @@ export default function RoomPage() {
             dispatch({ type: "CLEAR_TOAST_ERROR" });
             break;
           case "move_made":
-            roomDebug("event_move_made", {
-              move: payload.move || null,
-              turn: payload.turn
-            });
             playSound(resolveMoveSoundKey(payload));
             dispatch({
               type: "MOVE_MADE",
@@ -437,11 +412,6 @@ export default function RoomPage() {
             break;
           case "error": {
             const normalized = normalizeError(payload);
-            roomDebug("event_error", {
-              code: normalized.code,
-              message: normalized.message,
-              retryable: normalized.retryable
-            });
             if (shouldPlayErrorSound(normalized)) {
               playSound("error");
             }
@@ -460,7 +430,6 @@ export default function RoomPage() {
   }, [subscribe, roomCode]);
 
   useEffect(() => {
-    roomDebug("socket_state", socketState);
     dispatch({
       type: "SOCKET_STATE",
       status: socketState.status,
@@ -488,7 +457,6 @@ export default function RoomPage() {
     if (!accessToken || socketState.status !== "connected") {
       return;
     }
-    roomDebug("socket_join_room", { roomCode, connectionSerial: socketState.connectionSerial });
     send("join_room", { roomCode });
   }, [accessToken, roomCode, send, socketState.connectionSerial, socketState.status]);
 
@@ -532,7 +500,6 @@ export default function RoomPage() {
   }
 
   function confirmStartGame() {
-    roomDebug("action_start_game", { roomCode, settings: gameSettings });
     send("start_game", { roomCode, settings: gameSettings });
     setSettingsModalOpen(false);
   }
@@ -547,12 +514,6 @@ export default function RoomPage() {
   }
 
   function onMove(move) {
-    roomDebug("action_make_move", {
-      roomCode,
-      move,
-      gameActive: Boolean(game),
-      isMyTurn
-    });
     send("make_move", { roomCode, move });
   }
 
@@ -587,11 +548,6 @@ export default function RoomPage() {
 
       const observer = {
         videoTileDidUpdate: (tileState) => {
-          roomDebug("media_video_tile_update", {
-            tileId: tileState.tileId,
-            localTile: Boolean(tileState.localTile),
-            boundAttendeeId: tileState.boundAttendeeId || null
-          });
           if (!tileState.boundAttendeeId || !tileState.tileId) {
             return;
           }
@@ -614,7 +570,6 @@ export default function RoomPage() {
           }
         },
         videoTileWasRemoved: (tileId) => {
-          roomDebug("media_video_tile_removed", { tileId });
           if (localTileIdRef.current === tileId) {
             localTileIdRef.current = null;
           }
@@ -625,7 +580,6 @@ export default function RoomPage() {
           }
         },
         audioVideoDidStop: (sessionStatus) => {
-          roomDebug("media_audio_video_stopped", { statusCode: sessionStatus.statusCode() });
           dispatch({
             type: "SET_BLOCKING_ERROR",
             error: {
@@ -651,12 +605,7 @@ export default function RoomPage() {
 
       await startMedia(audioVideo, { audioInputDeviceId, videoInputDeviceId });
       dispatch({ type: "MEDIA_STARTED", message: "Connected. Waiting for remote video..." });
-      roomDebug("media_started", {
-        audioInputDeviceId: Boolean(audioInputDeviceId),
-        videoInputDeviceId: Boolean(videoInputDeviceId)
-      });
     } catch (error) {
-      roomDebug("media_start_failed", { message: error.message || "unknown" });
       stopMeetingSession();
       dispatch({
         type: "SET_BLOCKING_ERROR",
