@@ -1,6 +1,6 @@
 # Chess-Chat
 
-A real-time chess app with in-browser video chat, built as an AWS portfolio project. Two players share a room code, play chess on a live board, and talk over video — all in one tab.
+A real-time chess app with in-browser video chat, built as an AWS portfolio project.
 
 Portfolio write-ups: [timtimtim87.github.io](https://timtimtim87.github.io)
 
