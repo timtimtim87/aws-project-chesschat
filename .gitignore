@@ -64,6 +64,7 @@ terraform.rc
 
 # Existing local artifact locations
 infra/diagrams/
+infra/RESOURCE_REGISTRY.md
 screen_templates/screen_png/
 DOCS/AGENT_HANDOVER_*.md
 
