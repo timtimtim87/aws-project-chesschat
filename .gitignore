@@ -66,3 +66,9 @@ terraform.rc
 infra/diagrams/
 screen_templates/screen_png/
 DOCS/AGENT_HANDOVER_*.md
+
+# Personal learning notes (not for repo)
+TERRAFORM_DEEP_DIVE.md
+
+# Pre-cleanup backup (not for repo)
+_backup/

@@ -3,6 +3,7 @@ import { Router } from "express";
 import { config } from "../config.js";
 import { deleteUser, ensureUser, getUser, looksLikeOpaqueUsername, setUsername } from "../services/dynamodb.js";
 import { sendHttpError } from "../utils/errors.js";
+import { log } from "../utils/logger.js";
 
 const cognito = new CognitoIdentityProviderClient({ region: config.cognito.region });
 
@@ -99,9 +100,9 @@ router.delete("/me", async (req, res) => {
       );
     } catch (cognitoErr) {
       // DynamoDB records are gone so the username is freed and re-registration works.
-      // Log the failure but don't surface it — a Cognito ghost account without DynamoDB
-      // backing cannot log in and is harmless until IAM or a manual cleanup resolves it.
-      console.error("Cognito AdminDeleteUser failed:", cognitoErr.message);
+      // A Cognito ghost account without DynamoDB backing cannot log in and is harmless
+      // until a manual cleanup resolves it.
+      log("warn", "cognito_delete_user_failed", { cognitoUsername, error: cognitoErr.message });
     }
 
     res.status(204).end();
